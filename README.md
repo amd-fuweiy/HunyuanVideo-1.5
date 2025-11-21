@@ -54,6 +54,8 @@ If you develop/use HunyuanVideo in your projects, welcome to let us know.
 ## 📑 Open-source Plan
 - HunyuanVideo-1.5 (T2V/I2V)
   - [x] Inference Code and checkpoints
+  - [x] ComfyUI Support
+  - [x] LightX2V Support
   - [ ] Diffusers Support
   - [ ] Release all model weights (Sparse attention, distill model, and SR models)
 
