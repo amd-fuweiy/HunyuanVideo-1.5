@@ -37,7 +37,6 @@ from diffusers.models import AutoencoderKL
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.utils import BaseOutput, deprecate, logging
-from diffusers.utils.torch_utils import randn_tensor
 
 from hyvideo.commons import (
     PIPELINE_CONFIGS,
@@ -464,9 +463,7 @@ class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
             )
 
         if latents is None:
-            latents = randn_tensor(
-                shape, generator=generator, device=device, dtype=dtype
-            )
+            latents = torch.randn(shape, generator=generator, dtype=dtype).to(device)
         else:
             latents = latents.to(device)
 
@@ -1017,7 +1014,7 @@ class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
             assert seed is not None
 
         if generator is None and seed is not None:
-            generator = torch.Generator(device=self.execution_device).manual_seed(seed)
+            generator = torch.Generator(device=torch.device('cpu')).manual_seed(seed)
 
         if reference_image is not None:
             if self.ideal_resolution is not None and target_resolution != self.ideal_resolution:
