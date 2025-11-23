@@ -33,7 +33,10 @@ Download the ComfyUI checkpoint from Hugging Face:
 
 Find workflow templates at:
 
-**Templates**: https://github.com/Comfy-Org/workflow_templates/tree/main/templates
+- **720p Image-to-Video**: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_hunyuan_video_1.5_720p_i2v.json
+- **720p Text-to-Video**: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_hunyuan_video_1.5_720p_t2v.json
+
+> **Note**: Workflows are still being updated.
 
 ### How to Use
 
@@ -44,7 +47,13 @@ Find workflow templates at:
 
 ### Recommended Inference Configurations
 
+<div style="color: red;">
+Important!
+</div>
+
+
 The following table provides the optimal inference configurations (CFG scale, embedded CFG scale, flow shift, and inference steps) for each model to achieve the best generation quality:
+
 
 | Model | CFG Scale | Embedded CFG Scale | Flow Shift | Inference Steps |
 |-------|-----------|-------------------|------------|-----------------|
@@ -60,6 +69,7 @@ The following table provides the optimal inference configurations (CFG scale, em
 | 720p I2V Distilled Sparse | 1 | None | 9 | 50 |
 | 480→720 SR | 1 | None | 2 | 6 |
 | 720→1080 SR | 1 | None | 2 | 8 |
+
 
 ### Prompt Writing Tips
 
