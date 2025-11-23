@@ -463,7 +463,7 @@ class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
             )
 
         if latents is None:
-            latents = torch.randn(shape, generator=generator, dtype=dtype).to(device)
+            latents = torch.randn(shape, generator=generator, device=torch.device('cpu'), dtype=dtype).to(device)
         else:
             latents = latents.to(device)
 

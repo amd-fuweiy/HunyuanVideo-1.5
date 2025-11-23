@@ -237,7 +237,7 @@ class HunyuanVideo_1_5_SR_Pipeline(HunyuanVideo_1_5_Pipeline):
         if get_parallel_state().sp_enabled:
             assert seed is not None
         if generator is None and seed is not None:
-            generator = torch.Generator(device=self.execution_device).manual_seed(seed)
+            generator = torch.Generator(device=torch.device('cpu')).manual_seed(seed)
 
         sr_stride = 16
         base_size = SizeMap[self.config.base_resolution]
