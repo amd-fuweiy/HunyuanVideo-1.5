@@ -172,6 +172,8 @@ def maybe_fallback_attn_mode(attn_mode, infer_state=None, block_idx=None):
     Returns:
         Final attention mode to use
     """
+    import warnings
+    
     # Check for sageattn and flex-block-attn conflict
     enable_sageattn = False
     if infer_state is not None:
@@ -187,29 +189,23 @@ def maybe_fallback_attn_mode(attn_mode, infer_state=None, block_idx=None):
         attn_mode = 'sageattn'
         return attn_mode
     
-    # Handle flash attention modes - raise exception if not available instead of falling back
+    # Handle flash attention modes
     if attn_mode == 'flash':
         if is_flash3_available():
             attn_mode = 'flash3'
         elif is_flash2_available():
             attn_mode = 'flash2'
         else:
-            raise RuntimeError(
-                "flash attention is not available. "
-                "Please install flash-attn package or use a different attention mode."
-            )
+            warnings.warn("flash is not available. Falling back to torch attention.")
+            attn_mode = 'torch'
     elif attn_mode == 'flash3':
         if not is_flash3_available():
-            raise RuntimeError(
-                "flash3 attention is not available. "
-                "Please install flash-attn with flash3 support or use a different attention mode."
-            )
+            warnings.warn("flash3 is not available. Falling back to torch attention.")
+            attn_mode = 'torch'
     elif attn_mode == 'flash2':
         if not is_flash2_available():
-            raise RuntimeError(
-                "flash2 attention is not available. "
-                "Please install flash-attn package or use a different attention mode."
-            )
+            warnings.warn("flash2 is not available. Falling back to torch attention.")
+            attn_mode = 'torch'
     if attn_mode in ('flex-block-attn'):
         from hyvideo.commons import is_sparse_attn_available
         if not is_sparse_attn_available():
