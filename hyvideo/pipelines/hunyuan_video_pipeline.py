@@ -1444,10 +1444,14 @@ class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
             overlap_group_offloading = available_cpu_mem_gb > 64
 
         if overlap_group_offloading:
+            pass
             # Using streams is only supported for num_blocks_per_group=1
-            group_offloading_kwargs['num_blocks_per_group'] = 1
-            group_offloading_kwargs['use_stream'] = True
-            group_offloading_kwargs['record_stream'] = True
+            # group_offloading_kwargs['num_blocks_per_group'] = 1
+            # group_offloading_kwargs['use_stream'] = True
+            # group_offloading_kwargs['record_stream'] = True
+
+
+        loguru.logger.info(f"{enable_offloading=} {enable_group_offloading=} {overlap_group_offloading=}")
 
         if enable_group_offloading:
             assert enable_offloading
