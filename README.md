@@ -62,6 +62,8 @@ If you develop/use HunyuanVideo-1.5 in your projects, welcome to let us know.
 
 - **Wan2GP v9.62** - [Wan2GP](https://github.com/deepbeepmeep/Wan2GP): WanGP is a very low VRAM app (as low 6 GB of VRAM for Hunyuan Video 1.5) supports Lora Accelerator for a 8 steps generation and offers tools to facilitate Video Generation.
 
+- **ComfyUI-MagCache** - [ComfyUI-MagCache](https://github.com/Zehong-Ma/ComfyUI-MagCache): MagCache is a training-free caching approach that accelerates video generation by estimating fluctuating differences among model outputs across timesteps. It achieves 1.7x speedup for HunyuanVideo-1.5 with 20 inference steps.
+
 
 ## 📑 Open-source Plan
 - HunyuanVideo-1.5 (T2V/I2V)

@@ -7,6 +7,7 @@ This guide helps you use ComfyUI to run HunyuanVideo-1.5 model.
 - [Installation](#installation)
 - [Download Models](#download-models)
 - [Workflow Templates](#workflow-templates)
+- [Community Contributions](#community-contributions)
 - [Links](#links)
 
 ## 🚀 Installation
@@ -67,6 +68,12 @@ Find workflow templates at:
 - Use detailed, descriptive prompts for better results
 - Refer to the [HunyuanVideo-1.5 Prompt Handbook](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5/blob/main/assets/HunyuanVideo_1_5_Prompt_Handbook_EN.md) for guidance
 - Include details about camera movement, style, lighting, etc.
+
+## 🧩 Community Contributions
+
+If you develop/use HunyuanVideo-1.5 in your ComfyUI projects, welcome to let us know.
+
+- **ComfyUI-MagCache** - [ComfyUI-MagCache](https://github.com/Zehong-Ma/ComfyUI-MagCache): MagCache is a training-free caching approach that accelerates video generation by estimating fluctuating differences among model outputs across timesteps. It achieves 1.7x speedup for HunyuanVideo-1.5 with 20 inference steps.
 
 ## 🔗 Links
 
