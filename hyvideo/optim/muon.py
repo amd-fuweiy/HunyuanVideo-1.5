@@ -80,7 +80,6 @@ class Muon(torch.optim.Optimizer):
         adamw_params=None,
         adamw_betas=(0.95, 0.95),
         adamw_eps=1e-8,
-        fsdp_strategy='none'
     ):
 
         defaults = dict(
