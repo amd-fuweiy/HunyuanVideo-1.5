@@ -40,7 +40,7 @@ HunyuanVideo-1.5作为一款轻量级视频生成模型，仅需83亿参数即�
 </p>
 
 ## 🔥🔥🔥 最新动态
-* 📚 训练代码即将发布。
+* 📚 训练代码即将发布。HunyuanVideo-1.5 使用 Muon 优化器进行训练，我们在[Training](#-training) 部分开源。**如果您希望继续训练我们的模型，或使用 LoRA 进行微调，请使用 Muon 优化器。**
 * 🚀 Nov 27, 2025: 我们现已支持 cache 推理（deepcache, teacache, taylorcache），可极大加速推理！请 pull 最新代码体验。 🔥🔥🔥🆕 
 * 🚀 Nov 24, 2025: 我们现已支持 deepcache 推理。
 * 👋 Nov 20, 2025: 我们开源了 HunyuanVideo-1.5的代码和推理权重

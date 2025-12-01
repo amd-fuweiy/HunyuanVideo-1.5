@@ -41,7 +41,7 @@ HunyuanVideo-1.5 is a video generation model that delivers top-tier quality with
 </p>
 
 ## 🔥🔥🔥 News
-* 📚 Training code is coming soon.
+* 📚 Training code is coming soon. HunyuanVideo-1.5 is trained using the Muon optimizer, which we have open-sourced in the in [Training](#-training) section. **If you would like to continue training our model or fine-tune it with LoRA, please use the Muon optimizer.**
 * 🚀 Nov 27, 2025: We now support cache inference (deepcache, teacache, taylorcache), achieving significant speedup! Pull the latest code to try it. 🔥🔥🔥🆕 
 * 🚀 Nov 24, 2025: We now support deepcache inference.
 * 👋 Nov 20, 2025: We release the inference code and model weights of HunyuanVideo-1.5.
