@@ -171,6 +171,14 @@ class TrainingConfig:
     
     # Resume training configuration
     resume_from_checkpoint: Optional[str] = None  # Path to checkpoint directory to resume from
+    
+    # LoRA configuration
+    use_lora: bool = False
+    lora_r: int = 8
+    lora_alpha: int = 16
+    lora_dropout: float = 0.0
+    lora_target_modules: Optional[List[str]] = None  # Target modules for LoRA (default: all Linear layers)
+    pretrained_lora_path: Optional[str] = None
 
 
 class LinearInterpolationSchedule:
@@ -378,6 +386,9 @@ class HunyuanVideoTrainer:
         
         self.transformer.train()
 
+        if self.config.use_lora:
+            self._apply_lora()
+        
         if self.config.enable_gradient_checkpointing:
             self._apply_gradient_checkpointing()
         
@@ -386,10 +397,47 @@ class HunyuanVideoTrainer:
         
         if self.is_main_process:
             logger.info(f"Models loaded. Transformer dtype: {transformer_dtype}")
-            logger.info(f"Transformer parameters: {sum(p.numel() for p in self.transformer.parameters()):,}")
+            total_params = sum(p.numel() for p in self.transformer.parameters())
+            trainable_params = sum(p.numel() for p in self.transformer.parameters() if p.requires_grad)
+            logger.info(f"Transformer parameters: {total_params:,} (trainable: {trainable_params:,})")
+            logger.info(f"LoRA enabled: {self.config.use_lora}")
             logger.info(f"FSDP enabled: {self.config.enable_fsdp and self.world_size > 1}")
             logger.info(f"Gradient checkpointing enabled: {self.config.enable_gradient_checkpointing}")
             logger.info(f"Timestep sampling strategy: {self.config.snr_type.value}")
+    
+    def _apply_lora(self):
+        if self.is_main_process:
+            logger.info("Applying LoRA to transformer using PeftAdapterMixin...")
+        
+        if self.config.pretrained_lora_path is not None:
+            if self.is_main_process:
+                logger.info(f"Loading pretrained LoRA from {self.config.pretrained_lora_path}")
+            self.load_pretrained_lora(self.config.pretrained_lora_path)
+        else:
+            from peft import LoraConfig
+            
+            if self.config.lora_target_modules is None:
+                target_modules = "all-linear"
+            else:
+                target_modules = self.config.lora_target_modules
+            
+            lora_config = LoraConfig(
+                r=self.config.lora_r,
+                lora_alpha=self.config.lora_alpha,
+                target_modules=target_modules,
+                lora_dropout=self.config.lora_dropout,
+                bias="none",
+                task_type="FEATURE_EXTRACTION",
+            )
+            
+            self.transformer.add_adapter(lora_config, adapter_name="default")
+
+        
+        if self.is_main_process:
+            trainable_params = sum(p.numel() for p in self.transformer.parameters() if p.requires_grad)
+            total_params = sum(p.numel() for p in self.transformer.parameters())
+            logger.info(f"LoRA applied successfully. Trainable parameters: {trainable_params:,} / {total_params:,} "
+                       f"({100 * trainable_params / total_params:.2f}%)")
     
     def _apply_fsdp(self):
         if self.is_main_process:
@@ -397,6 +445,8 @@ class HunyuanVideoTrainer:
         
         param_dtype = torch.bfloat16
         reduce_dtype = torch.float32  # Reduce in float32 for stability
+
+        self.transformer = self.transformer.to(dtype=param_dtype)
         
         mp_policy = MixedPrecisionPolicy(
             param_dtype=param_dtype,
@@ -728,6 +778,32 @@ class HunyuanVideoTrainer:
         if self.world_size > 1:
             dist.barrier()
         
+        if self.config.use_lora and hasattr(self.transformer, "save_lora_adapter"):
+            lora_dir = os.path.join(checkpoint_dir, "lora")
+            os.makedirs(lora_dir, exist_ok=True)
+            
+            if hasattr(self.transformer, "peft_config") and self.transformer.peft_config:
+                adapter_names = list(self.transformer.peft_config.keys())
+                if self.is_main_process:
+                    logger.info(f"Saving {len(adapter_names)} LoRA adapter(s): {adapter_names}")
+                
+                for adapter_name in adapter_names:
+                    adapter_dir = os.path.join(lora_dir, adapter_name)
+                    os.makedirs(adapter_dir, exist_ok=True)
+                    self.transformer.save_lora_adapter(
+                        save_directory=adapter_dir,
+                        adapter_name=adapter_name,
+                        safe_serialization=True,
+                    )
+                    if self.is_main_process:
+                        logger.info(f"LoRA adapter '{adapter_name}' saved to {adapter_dir}")
+            else:
+                raise RuntimeError("No LoRA adapter found in the model")
+            
+            if self.world_size > 1:
+                dist.barrier()
+        
+        # Save full model state dict
         model_state_dict = get_model_state_dict(self.transformer)
         dcp.save(
             state_dict={"model": model_state_dict},
@@ -756,6 +832,15 @@ class HunyuanVideoTrainer:
         
         if self.is_main_process:
             logger.info(f"Checkpoint saved at step {step} to {checkpoint_dir}")
+
+    def load_pretrained_lora(self, lora_dir: str):
+        self.transformer.load_lora_adapter(
+            pretrained_model_name_or_path_or_dict=lora_dir,
+            prefix=None,
+            adapter_name="default",
+            use_safetensors=True,
+            hotswap=False,
+        )
     
     def load_checkpoint(self, checkpoint_path: str):
         if not os.path.exists(checkpoint_path):
@@ -767,6 +852,7 @@ class HunyuanVideoTrainer:
         if self.world_size > 1:
             dist.barrier()
         
+        
         transformer_dir = os.path.join(checkpoint_path, "transformer")
         if os.path.exists(transformer_dir):
             model_state_dict = get_model_state_dict(self.transformer)
@@ -776,7 +862,9 @@ class HunyuanVideoTrainer:
             )
             if self.is_main_process:
                 logger.info("Transformer model state loaded")
-        
+        else:
+            logger.warning(f"Transformer dcp checkpoint not found from {checkpoint_path}")
+
         optimizer_dir = os.path.join(checkpoint_path, "optimizer")
         if os.path.exists(optimizer_dir):
             optimizer_state_dict = get_optimizer_state_dict(
@@ -885,6 +973,7 @@ class HunyuanVideoTrainer:
                     video_path = os.path.join(
                         self.validation_output_dir,
                         f"step_{step:06d}_prompt_{idx:02d}.mp4"
+                    )
                     print(f"Prompt: {prompt}")
                     video_to_save = output.videos
                     if dist.get_rank() == 0:
@@ -898,8 +987,8 @@ class HunyuanVideoTrainer:
         
         finally:
             self.transformer.train()
-        """
         pass
+        """
 
 
 def create_dummy_dataloader(config: TrainingConfig):
@@ -1063,6 +1152,22 @@ def main():
     parser.add_argument("--resume_from_checkpoint", type=str, default=None,
                         help="Path to checkpoint directory to resume training from (e.g., ./outputs/checkpoint-1000)")
     
+    # LoRA parameters
+    parser.add_argument("--use_lora", type=str_to_bool, nargs='?', const=True, default=False,
+                        help="Enable LoRA training (default: false). "
+                             "Use --use_lora or --use_lora true/1 to enable, --use_lora false/0 to disable")
+    parser.add_argument("--lora_r", type=int, default=8,
+                        help="LoRA rank (default: 8)")
+    parser.add_argument("--lora_alpha", type=int, default=16,
+                        help="LoRA alpha scaling parameter (default: 16)")
+    parser.add_argument("--lora_dropout", type=float, default=0.0,
+                        help="LoRA dropout rate (default: 0.0)")
+    parser.add_argument("--lora_target_modules", type=str, nargs="+", default=None,
+                        help="Target modules for LoRA (default: all Linear layers). "
+                             "Example: --lora_target_modules img_attn_q img_attn_v img_mlp.fc1")
+    parser.add_argument("--pretrained_lora_path", type=str, default=None,
+                        help="Path to pretrained LoRA adapter to load. If provided, will load this adapter instead of creating a new one.")
+    
     args = parser.parse_args()
     
     config = TrainingConfig(
@@ -1092,6 +1197,12 @@ def main():
         snr_type=SNRType(args.flow_snr_type),
         validate_video_length=args.validate_video_length,
         resume_from_checkpoint=args.resume_from_checkpoint,
+        use_lora=args.use_lora,
+        lora_r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        lora_dropout=args.lora_dropout,
+        lora_target_modules=args.lora_target_modules,
+        pretrained_lora_path=args.pretrained_lora_path,
     )
     
     trainer = HunyuanVideoTrainer(config)

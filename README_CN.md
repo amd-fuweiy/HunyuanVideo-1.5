@@ -40,6 +40,7 @@ HunyuanVideo-1.5作为一款轻量级视频生成模型，仅需83亿参数即�
 </p>
 
 ## 🔥🔥🔥 最新动态
+* 🚀 Dec 09, 2025: LoRA 微调脚本已发布，欢迎使用！ 🔥🔥🔥🆕
 * 🚀 Dec 05, 2025: **新模型发布**：我们现已发布 [480p I2V 步数蒸馏模型](https://huggingface.co/tencent/HunyuanVideo-1.5/tree/main/transformer/480p_i2v_step_distilled)，建议使用 8 或 12 步生成视频！在 RTX 4090 上，端到端生成耗时减少 75%，单卡 RTX 4090 可在 **75 秒**内生成视频。步数蒸馏模型在保持与原模型相当质量的同时实现了显著的加速。详细的质量对比请参见[步数蒸馏对比文档](./assets/step_distillation_comparison.md)。如需更快的生成速度，您也可以尝试使用4步推理（速度更快，质量略有下降）。**启用步数蒸馏模型，请运行 `generate.py` 并使用 `--enable_step_distill` 参数。** 详细的使用说明请参见[使用方法](#-使用方法)。 🔥🔥🔥🆕
 * 📚 Dec 05, 2025: **训练代码已发布**：我们现已开源 HunyuanVideo-1.5 的完整训练代码！训练脚本（`train.py`）提供了完整的训练流程，支持分布式训练、FSDP、context parallel、梯度检查点等功能。HunyuanVideo-1.5 使用 Muon 优化器进行训练，我们在[训练](#-训练)部分已开源。**如果您希望继续训练我们的模型，或使用 LoRA 进行微调，请使用 Muon 优化器。** 详细使用说明请参见[训练](#-训练)部分。 🔥🔥🔥🆕
 * 🎉 **Diffusers 支持**：HunyuanVideo-1.5 现已支持 Hugging Face Diffusers！查看我们的 [Diffusers 集合](https://huggingface.co/collections/hunyuanvideo-community/hunyuanvideo-15) 以便轻松集成。 🔥🔥🔥🆕
@@ -481,6 +482,11 @@ torchrun --nproc_per_node=8 train.py \
 | `--i2v_prob` | 视频数据使用 i2v 任务的概率 | 0.3 |
 | `--use_muon` | 使用 Muon 优化器 | true |
 | `--resume_from_checkpoint` | 从检查点目录恢复训练 | None |
+| `--use_lora` | 启用 LoRA 微调 | false |
+| `--lora_r` | LoRA rank | 8 |
+| `--lora_alpha` | LoRA alpha 缩放参数 | 16 |
+| `--lora_dropout` | LoRA dropout 率 | 0.0 |
+| `--pretrained_lora_path` | 预训练 LoRA 适配器路径 | None |
 
 #### 4. 监控训练
 
@@ -495,6 +501,28 @@ torchrun --nproc_per_node=8 train.py \
 python train.py \
   --pretrained_model_root <路径> \
   --resume_from_checkpoint ./outputs/checkpoint-1000
+```
+
+#### 6. LoRA 微调
+
+启用 LoRA 微调，在训练命令中添加 `--use_lora`。LoRA 适配器将保存在检查点目录的 `lora/` 子目录下：
+
+```bash
+torchrun --nproc_per_node=8 train.py \
+  --pretrained_model_root ./ckpts \
+  --use_lora \
+  --lora_r 8 \
+  --lora_alpha 16 \
+  --learning_rate 1e-4 \
+  --output_dir ./outputs
+```
+
+加载预训练的 LoRA 适配器，使用 `--pretrained_lora_path`：
+```bash
+torchrun --nproc_per_node=8 train.py \
+  --pretrained_model_root ./ckpts \
+  --use_lora \
+  --pretrained_lora_path ./outputs/checkpoint-1000/lora/default
 ```
 
 

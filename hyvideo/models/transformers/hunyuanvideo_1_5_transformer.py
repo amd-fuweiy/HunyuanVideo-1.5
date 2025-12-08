@@ -14,6 +14,7 @@
 # of rights and permissions under this agreement.
 # See the License for the specific language governing permissions and limitations under the License.
 
+import os
 from typing import Any, List, Tuple, Optional, Union, Dict
 
 import torch
@@ -38,6 +39,8 @@ from .modules.token_refiner import SingleTokenRefiner
 from hyvideo.utils.communications import all_gather
 from hyvideo.models.text_encoders.byT5 import ByT5Mapper
 from hyvideo.commons.parallel_states import get_parallel_state
+from diffusers.loaders.peft import PeftAdapterMixin
+
 
 class MMDoubleStreamBlock(nn.Module):
 
@@ -310,7 +313,7 @@ class MMSingleStreamBlock(nn.Module):
         
         return x + apply_gate(output, gate=mod_gate)
 
-class HunyuanVideo_1_5_DiffusionTransformer(ModelMixin, ConfigMixin):
+class HunyuanVideo_1_5_DiffusionTransformer(ModelMixin, ConfigMixin, PeftAdapterMixin):
     """
     HunyuanVideo Transformer backbone.
 
@@ -889,3 +892,78 @@ class HunyuanVideo_1_5_DiffusionTransformer(ModelMixin, ConfigMixin):
             block.attn_mode = attn_mode 
         for block in self.single_blocks:
             block.attn_mode = attn_mode
+
+    def save_lora_adapter(
+        self,
+        save_directory,
+        adapter_name: str = "default",
+        upcast_before_saving: bool = False,
+        safe_serialization: bool = True,
+        weight_name: Optional[str] = None,
+    ):
+        """
+        Save the LoRA parameters corresponding to the underlying model.
+
+        Arguments:
+            save_directory (`str` or `os.PathLike`):
+                Directory to save LoRA parameters to. Will be created if it doesn't exist.
+            adapter_name: (`str`, defaults to "default"): The name of the adapter to serialize. Useful when the
+                underlying model has multiple adapters loaded.
+            upcast_before_saving (`bool`, defaults to `False`):
+                Whether to cast the underlying model to `torch.float32` before serialization.
+            safe_serialization (`bool`, *optional*, defaults to `True`):
+                Whether to save the model using `safetensors` or the traditional PyTorch way with `pickle`.
+            weight_name: (`str`, *optional*, defaults to `None`): Name of the file to serialize the state dict with.
+        """
+        from peft.utils import get_peft_model_state_dict
+
+        from diffusers.loaders.lora_base import LORA_ADAPTER_METADATA_KEY, LORA_WEIGHT_NAME, LORA_WEIGHT_NAME_SAFE
+        from diffusers.utils import get_adapter_name
+        import safetensors
+        import json
+        from pathlib import Path
+
+
+        if adapter_name is None:
+            adapter_name = get_adapter_name(self)
+
+        if adapter_name not in getattr(self, "peft_config", {}):
+            raise ValueError(f"Adapter name {adapter_name} not found in the model.")
+
+        lora_adapter_metadata = self.peft_config[adapter_name].to_dict()
+
+        lora_layers_to_save = get_peft_model_state_dict(
+            self.to(dtype=torch.float32 if upcast_before_saving else None), adapter_name=adapter_name
+        )
+        if os.path.isfile(save_directory):
+            raise ValueError(f"Provided path ({save_directory}) should be a directory, not a file")
+
+        if safe_serialization:
+
+            def save_function(weights, filename):
+                # Inject framework format.
+                metadata = {"format": "pt"}
+                if lora_adapter_metadata is not None:
+                    for key, value in lora_adapter_metadata.items():
+                        if isinstance(value, set):
+                            lora_adapter_metadata[key] = list(value)
+                    metadata[LORA_ADAPTER_METADATA_KEY] = json.dumps(lora_adapter_metadata, indent=2, sort_keys=True)
+
+                return safetensors.torch.save_file(weights, filename, metadata=metadata)
+
+        else:
+            save_function = torch.save
+
+        os.makedirs(save_directory, exist_ok=True)
+
+        if weight_name is None:
+            if safe_serialization:
+                weight_name = LORA_WEIGHT_NAME_SAFE
+            else:
+                weight_name = LORA_WEIGHT_NAME
+
+        save_path = Path(save_directory, weight_name).as_posix()
+        lora_layers_to_save = {k:(v.full_tensor() if hasattr(v, 'full_tensor') else v) for k, v in lora_layers_to_save.items()}
+        if os.environ.get('RANK', '0') == '0':
+            save_function(lora_layers_to_save, save_path)
+        logger.info(f"Model weights saved in {save_path}")

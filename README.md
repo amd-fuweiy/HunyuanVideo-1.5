@@ -41,6 +41,7 @@ HunyuanVideo-1.5 is a video generation model that delivers top-tier quality with
 </p>
 
 ## 🔥🔥🔥 News
+* 🚀 Dec 09, 2025: LoRA tuning script is released, enjoy it! 🔥🔥🔥🆕
 * 🚀 Dec 05, 2025: **New Release**: We now release the [480p I2V step-distilled model](https://huggingface.co/tencent/HunyuanVideo-1.5/tree/main/transformer/480p_i2v_step_distilled), which generates videos in 8 or 12 steps (recommended)! On RTX 4090, end-to-end generation time is reduced by 75%, and a single RTX 4090 can generate videos within **75 seconds**. The step-distilled model maintains comparable quality to the original model while achieving significant speedup. See [Step Distillation Comparison](./assets/step_distillation_comparison.md) for detailed quality comparisons. For even faster generation, you can also try 4 steps (faster speed with slightly reduced quality). **To enable the step-distilled model, run `generate.py` with the `--enable_step_distill` parameter.** See [Usage](#-usage) for detailed usage instructions. 🔥🔥🔥🆕
 * 📚 Dec 05, 2025: **Training Code Released**: We now open-source the training code for HunyuanVideo-1.5! The training script (`train.py`) provides a full training pipeline with support for distributed training, FSDP, context parallel, gradient checkpointing, and more. HunyuanVideo-1.5 is trained using the Muon optimizer, which we have open-sourced in the [Training](#-training) section. **If you would like to continue training our model or fine-tune it with LoRA, please use the Muon optimizer.** See [Training](#-training) section for detailed usage instructions. 🔥🔥🔥🆕
 * 🎉 **Diffusers Support**: HunyuanVideo-1.5 is now available on Hugging Face Diffusers! Check out [Diffusers collection](https://huggingface.co/collections/hunyuanvideo-community/hunyuanvideo-15) for easy integration. 🔥🔥🔥🆕
@@ -482,6 +483,11 @@ torchrun --nproc_per_node=8 train.py \
 | `--i2v_prob` | Probability of i2v task for video data | 0.3 |
 | `--use_muon` | Use Muon optimizer | true |
 | `--resume_from_checkpoint` | Resume from checkpoint directory | None |
+| `--use_lora` | Enable LoRA fine-tuning | false |
+| `--lora_r` | LoRA rank | 8 |
+| `--lora_alpha` | LoRA alpha scaling parameter | 16 |
+| `--lora_dropout` | LoRA dropout rate | 0.0 |
+| `--pretrained_lora_path` | Path to pretrained LoRA adapter | None |
 
 #### 4. Monitor Training
 
@@ -496,6 +502,28 @@ Use `--resume_from_checkpoint <checkpoint_dir>` to resume from a saved checkpoin
 python train.py \
   --pretrained_model_root <path> \
   --resume_from_checkpoint ./outputs/checkpoint-1000
+```
+
+#### 6. LoRA Fine-tuning
+
+To enable LoRA fine-tuning, add `--use_lora` to your training command. LoRA adapters will be saved in the checkpoint directory under `lora/`:
+
+```bash
+torchrun --nproc_per_node=8 train.py \
+  --pretrained_model_root ./ckpts \
+  --use_lora \
+  --lora_r 8 \
+  --lora_alpha 16 \
+  --learning_rate 1e-4 \
+  --output_dir ./outputs
+```
+
+To load a pretrained LoRA adapter, use `--pretrained_lora_path`:
+```bash
+torchrun --nproc_per_node=8 train.py \
+  --pretrained_model_root ./ckpts \
+  --use_lora \
+  --pretrained_lora_path ./outputs/checkpoint-1000/lora/default
 ```
 
 
