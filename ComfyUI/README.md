@@ -37,9 +37,12 @@ Find workflow templates at:
 - **720p Image-to-Video**: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_hunyuan_video_1.5_720p_i2v.json
 - **720p Text-to-Video**: https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_hunyuan_video_1.5_720p_t2v.json
 
+**Important**: If you enable the Tiled VAE decoding node, please set the 'temporal_size' to the maximum value (4096) to avoid generating artifacts.
+
 
 * **Important**: Workflows are still being updated. Please ensure you are using the latest version of the workflow templates to guarantee the best generation results.
 * **Important**: The distilled models include both CFG-distilled models and step-distilled models. CFG-distilled models should run with 50 inference steps for best generation quality. Step-distilled models (480p I2V) can run with 8 or 12 steps (recommended) for faster generation, or 4 steps for even faster speed with slightly reduced quality. The recommended configurations are provided in the following table.
+* **Important**: Please strictly follow the configuration below to guarantee the best generation results.
 
 
 ### Recommended Inference Configurations
