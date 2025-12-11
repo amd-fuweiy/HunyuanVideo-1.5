@@ -1350,6 +1350,13 @@ class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
         """
         if infer_state is not None:
 
+            if infer_state.use_fp8_gemm:
+                from angelslim.compressor.diffusion import DynamicDiTQuantizer
+                quant_type = infer_state.quant_type
+                include_patterns = infer_state.include_patterns
+                quantizer = DynamicDiTQuantizer(quant_type=quant_type, include_patterns=include_patterns)
+                quantizer.convert_linear(self.transformer)
+
             if infer_state.enable_torch_compile:
                 # block-wise compile
                 for block in self.transformer.double_blocks:

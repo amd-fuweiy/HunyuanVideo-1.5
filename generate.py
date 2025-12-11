@@ -136,6 +136,12 @@ def generate_video(args):
 
     if args.sparse_attn and args.use_sageattn:
         raise ValueError("sparse_attn and use_sageattn cannot be enabled simultaneously. Please enable only one of them.")
+
+    if args.use_fp8_gemm and 'sgl' in args.quant_type:
+        try:
+            import sgl_kernel
+        except Exception:
+            raise ValueError("sgl_kernel is not installed. Please install it using `pip install sgl-kernel==0.3.18`")
     
     # if args.enable_torch_compile:
     #     torch._logging.set_logs(graph_code=True)
@@ -433,6 +439,22 @@ def main():
         '--lora_path', type=str, default=None,
         help='Path to LoRA adapter directory or checkpoint directory containing LoRA adapter. '
              'If provided, the LoRA adapter will be loaded to the transformer model.'
+    )
+
+    # fp8 gemm related
+    parser.add_argument(
+        '--use_fp8_gemm', type=str_to_bool, nargs='?', const=True, default=False,
+        help='Enable fp8 gemm for transformer (default: false). '
+             'Use --use_fp8_gemm or --use_fp8_gemm true/1 to enable, '
+             '--use_fp8_gemm false/0 to disable'
+    )
+    parser.add_argument(
+        '--quant_type', type=str, default="fp8-per-token-sgl",
+        help='Quantization type for fp8 gemm (e.g., fp8-per-tensor-weight-only, fp8-per-tensor, fp8-per-token-sgl)'
+    )
+    parser.add_argument(
+        '--include_patterns', type=str, default="double_blocks",
+        help='Include patterns for fp8 gemm (default: double_blocks)'
     )
 
     args = parser.parse_args()
