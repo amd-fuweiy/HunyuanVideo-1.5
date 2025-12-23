@@ -41,11 +41,11 @@ HunyuanVideo-1.5 is a video generation model that delivers top-tier quality with
 </p>
 
 ## 🔥🔥🔥 News
-* 🚀 Dec 09, 2025: LoRA tuning script is released, enjoy it! 🔥🔥🔥🆕
+* 🚀 Dec 23, 2025: Fp8 gemm inference is supported! 🔥🔥🔥🆕
 * 🚀 Dec 05, 2025: **New Release**: We now release the [480p I2V step-distilled model](https://huggingface.co/tencent/HunyuanVideo-1.5/tree/main/transformer/480p_i2v_step_distilled), which generates videos in 8 or 12 steps (recommended)! On RTX 4090, end-to-end generation time is reduced by 75%, and a single RTX 4090 can generate videos within **75 seconds**. The step-distilled model maintains comparable quality to the original model while achieving significant speedup. See [Step Distillation Comparison](./assets/step_distillation_comparison.md) for detailed quality comparisons. For even faster generation, you can also try 4 steps (faster speed with slightly reduced quality). **To enable the step-distilled model, run `generate.py` with the `--enable_step_distill` parameter.** See [Usage](#-usage) for detailed usage instructions. 🔥🔥🔥🆕
-* 📚 Dec 05, 2025: **Training Code Released**: We now open-source the training code for HunyuanVideo-1.5! The training script (`train.py`) provides a full training pipeline with support for distributed training, FSDP, context parallel, gradient checkpointing, and more. HunyuanVideo-1.5 is trained using the Muon optimizer, which we have open-sourced in the [Training](#-training) section. **If you would like to continue training our model or fine-tune it with LoRA, please use the Muon optimizer.** See [Training](#-training) section for detailed usage instructions. 🔥🔥🔥🆕
+* 📚 Dec 05, 2025: **Training Code & LoRA Tuning Script Released**: We now open-source the training code for HunyuanVideo-1.5! The training script (`train.py`) provides a full training pipeline with support for distributed training, FSDP, context parallel, gradient checkpointing, and more. HunyuanVideo-1.5 is trained using the Muon optimizer, which we have open-sourced in the [Training](#-training) section. **If you would like to continue training our model or fine-tune it with LoRA, please use the Muon optimizer.** See [Training](#-training) section for detailed usage instructions. 🔥🔥🔥🆕
 * 🎉 **Diffusers Support**: HunyuanVideo-1.5 is now available on Hugging Face Diffusers! Check out [Diffusers collection](https://huggingface.co/collections/hunyuanvideo-community/hunyuanvideo-15) for easy integration. 🔥🔥🔥🆕
-* 🚀 Nov 27, 2025: We now support cache inference (deepcache, teacache, taylorcache), achieving significant speedup! Pull the latest code to try it. 🔥🔥🔥🆕 
+* 🚀 Nov 27, 2025: We now support cache inference (deepcache, teacache, taylorcache), achieving significant speedup! Pull the latest code to try it.
 * 🚀 Nov 24, 2025: We now support deepcache inference.
 * 👋 Nov 20, 2025: We release the inference code and model weights of HunyuanVideo-1.5.
 
@@ -182,6 +182,13 @@ pip install -i https://mirrors.tencent.com/pypi/simple/ --upgrade tencentcloud-s
   export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 # Optional
   python3 setup.py install
   ```
+
+* SGL-Kernel:
+  To enable fp8 gemm for transformer, you need to install it by the following command:
+  ```bash
+  pip install sgl-kernel==0.3.18
+  ```
+
 
 ## 🧱 Download Pretrained Models
 
