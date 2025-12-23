@@ -276,6 +276,20 @@ def timestep_transform(timesteps: torch.Tensor, T: int, shift: float = 1.0) -> t
     return timesteps_transformed * T
 
 
+#def sync_tensor_for_sp(tensor: torch.Tensor, sp_group) -> torch.Tensor:
+#    """
+#    Sync tensor within sequence parallel group.
+#    Ensures all ranks in the SP group have the same tensor values.
+#    """
+#    if sp_group is None:
+#        return tensor
+#    if not isinstance(tensor, torch.Tensor):
+#        obj_list = [tensor]
+#        dist.broadcast_object_list(obj_list, src=0, group=sp_group)
+#        return obj_list[0]
+#    dist.broadcast(tensor, src=0, group=sp_group)
+#    return tensor
+
 def sync_tensor_for_sp(tensor: torch.Tensor, sp_group) -> torch.Tensor:
     """
     Sync tensor within sequence parallel group.
@@ -283,13 +297,22 @@ def sync_tensor_for_sp(tensor: torch.Tensor, sp_group) -> torch.Tensor:
     """
     if sp_group is None:
         return tensor
+
+    current_global_rank = dist.get_rank()
+    group_size = dist.get_world_size(group=sp_group)
+
+    all_global_ranks = [None] * group_size
+    dist.all_gather_object(all_global_ranks, current_global_rank, group=sp_group)
+
+    src_rank = min(all_global_ranks)
+
     if not isinstance(tensor, torch.Tensor):
         obj_list = [tensor]
-        dist.broadcast_object_list(obj_list, src=0, group=sp_group)
+        dist.broadcast_object_list(obj_list, src=src_rank, group=sp_group)
         return obj_list[0]
-    dist.broadcast(tensor, src=0, group=sp_group)
-    return tensor
 
+    dist.broadcast(tensor, src=src_rank, group=sp_group)
+    return tensor
 
 
 
@@ -1077,7 +1100,7 @@ def create_dummy_dataloader(config: TrainingConfig):
         def __getitem__(self, idx):
             # Video: temporal dimension must be 4n+1, using 17 frames
             # Generate data in range [-1, 1]
-            data = torch.rand(3, 121, 480, 848) * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+            data = torch.rand(3, 125, 720, 1280) * 2.0 - 1.0  # [0, 1] -> [-1, 1]
             data_type = "video"
 
             return {
