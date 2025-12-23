@@ -23,7 +23,7 @@ Quick Start:
 1. Implement your own dataloader:
    - Replace the `create_dummy_dataloader()` function with your own implementation
    - Your dataloader should return batches with the following format:
-     * "pixel_values": torch.Tensor - Video: [B, C, F, H, W] or Image: [B, C, H, W]
+     * "pixel_values": torch.Tensor - Video: [C, F, H, W] or Image: [C, H, W]
        Pixel values must be in range [-1, 1] 
        Note: For video data, temporal dimension F must be 4n+1 (e.g., 1, 5, 9, 13, 17, ...)
      * "text": List[str] - Text prompts for each sample
@@ -639,18 +639,18 @@ class HunyuanVideoTrainer:
         to satisfy VAE requirements. The dataset should ensure this before returning data.
         
         """
+        pixel_values = batch.get("pixel_values", None)
+        if pixel_values is not None:
+            pixel_values = pixel_values.to(self.device)
         if 'latents' in batch:
             latents = batch['latents'].to(self.device)
-            images = None
         else:
-            images = batch["pixel_values"].to(self.device)
-
-            latents = self.encode_vae(images)
+            latents = self.encode_vae(pixel_values)
         
         if self.sp_enabled:
             latents = sync_tensor_for_sp(latents, self.sp_group)
-            if images is not None:
-                images = sync_tensor_for_sp(images, self.sp_group)
+            if pixel_values is not None:
+                pixel_values = sync_tensor_for_sp(pixel_values, self.sp_group)
         
         data_type_raw = batch.get("data_type", "image")
         if isinstance(data_type_raw, list):
@@ -693,11 +693,11 @@ class HunyuanVideoTrainer:
         
         vision_states = None
         if task_type == "i2v":
-            assert images is not None, '`pixel_values` must be provided for i2v task'
-            if images.ndim == 5:
-                first_frame = images[:, :, 0, :, :]
+            assert pixel_values is not None, '`pixel_values` must be provided for i2v task'
+            if pixel_values.ndim == 5:
+                first_frame = pixel_values[:, :, 0, :, :]
             else:
-                first_frame = images
+                first_frame = pixel_values
             vision_states = self.encode_images(first_frame)
         
         noise = torch.randn_like(latents)
@@ -1052,16 +1052,16 @@ def create_dummy_dataloader(config: TrainingConfig):
     
     Example batch format:
     {
-        "pixel_values": torch.Tensor([B, 3, 17, 256, 256]),  # Video example
+        "pixel_values": torch.Tensor([3, 121, 480, 848]),  # Video example
         "text": ["A cat playing", "A dog running"],
         "data_type": "video",
-        "byt5_text_ids": torch.Tensor([B, 256]),  # Optional
-        "byt5_text_mask": torch.Tensor([B, 256]),  # Optional
+        "byt5_text_ids": torch.Tensor([256]),  # Optional
+        "byt5_text_mask": torch.Tensor([256]),  # Optional
     }
     
     Or with pre-encoded latents (faster):
     {
-        "latents": torch.Tensor([B, 16, 17, 32, 32]),  # Pre-encoded VAE latents
+        "latents": torch.Tensor([32, 31, 30, 53]),  # Pre-encoded VAE latents
         "text": ["A cat playing", "A dog running"],
         "data_type": "video",
     }
@@ -1077,14 +1077,14 @@ def create_dummy_dataloader(config: TrainingConfig):
         def __getitem__(self, idx):
             # Video: temporal dimension must be 4n+1, using 17 frames
             # Generate data in range [-1, 1]
-            data = torch.rand(3, 17, 64, 64) * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+            data = torch.rand(3, 121, 480, 848) * 2.0 - 1.0  # [0, 1] -> [-1, 1]
             data_type = "video"
 
             return {
                 "pixel_values": data,
                 "text": "A sample prompt",
                 "data_type": data_type,
-                # "latents": torch.randn(3, 16, 17, 32, 32),
+                "latents": torch.randn(32, 31, 30, 53),
                 # "byt5_text_ids": torch.zeros((256), dtype=torch.int64),
                 # "byt5_text_mask": torch.zeros((256), dtype=torch.int64),
             }
@@ -1103,8 +1103,8 @@ def main():
     parser = argparse.ArgumentParser(description="Train HunyuanVideo-1.5 on video data")
     
     # Model paths
-    parser.add_argument("--pretrained_model_root", type=str, required=True, help="Path to pretrained model")
-    parser.add_argument("--pretrained_transformer_version", type=str, default="720p_t2v", help="Transformer version")
+    parser.add_argument("--pretrained_model_root", type=str, default='ckpts', help="Path to pretrained model")
+    parser.add_argument("--pretrained_transformer_version", type=str, default="480p_t2v", help="Transformer version")
     
     # Training parameters
     parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate")
